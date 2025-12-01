@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>喝水记录器</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f7f9fc;
+    }
+    h2 {
+        text-align: center;
+    }
+    .box {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    input {
+        width: 60%;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        margin-right: 10px;
+    }
+    button {
+        padding: 10px 16px;
+        border: none;
+        background: #4a90e2;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    .quick-btn {
+        background: #6bbd6b;
+        margin-right: 10px;
+    }
+    button:hover {
+        opacity: 0.9;
+    }
+    ul {
+        list-style: none;
+        padding: 0;
+    }
+    li {
+        background: #eef3fc;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+    }
+    canvas {
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body>
+
+<h2>💧 每日喝水记录器</h2>
+
+<div class="box">
+    <h3>➕ 快速添加</h3>
+    <button class="quick-btn" onclick="quickAdd(100)">+100 ml</button>
+    <button class="quick-btn" onclick="quickAdd(200)">+200 ml</button>
+
+    <h3 style="margin-top:20px;">➕ 自定义添加</h3>
+    <input type="number" id="waterInput" placeholder="如 200" />
+    <button onclick="addWater()">添加</button>
+</div>
+
+<div class="box">
+    <h3>📊 今日总量：<span id="total">0</span> ml</h3>
+</div>
+
+<div class="box">
+    <h3>📅 今日记录</h3>
+    <ul id="recordList"></ul>
+</div>
+
+<div class="box">
+    <h3>📈 最近 7 天趋势</h3>
+    <canvas id="chart" height="100"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    function getToday() {
+        const d = new Date();
+        return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+    }
+
+    function loadData() {
+        return JSON.parse(localStorage.getItem("waterData") || "{}");
+    }
+
+    function saveData(data) {
+        localStorage.setItem("waterData", JSON.stringify(data));
+    }
+
+    function render() {
+        const data = loadData();
+        const today = getToday();
+        const todayList = data[today] || [];
+
+        // 今日总量
+        const total = todayList.reduce((a, b) => a + b, 0);
+        document.getElementById("total").textContent = total;
+
+        // 渲染列表
+        const list = document.getElementById("recordList");
+        list.innerHTML = "";
+        todayList.forEach((v) => {
+            const li = document.createElement("li");
+            li.textContent = `${v} ml`;
+            list.appendChild(li);
+        });
+
+        drawChart();
+    }
+
+    function addWater() {
+        const input = document.getElementById("waterInput");
+        const value = parseInt(input.value);
+
+        if (!value) {
+            alert("请输入数字！");
+            return;
+        }
+
+        saveRecord(value);
+        input.value = "";
+        render();
+    }
+
+    // 🍀 快速加水功能
+    function quickAdd(amount) {
+        saveRecord(amount);
+        render();
+    }
+
+    function saveRecord(amount) {
+        const data = loadData();
+        const today = getToday();
+
+        data[today] = data[today] || [];
+        data[today].push(amount);
+
+        saveData(data);
+    }
+
+    function drawChart() {
+        const ctx = document.getElementById('chart');
+        const data = loadData();
+
+        const labels = [];
+        const values = [];
+
+        for (let i = 6; i >= 0; i--) {
+            const day = new Date();
+            day.setDate(day.getDate() - i);
+            const key = `${day.getFullYear()}-${day.getMonth()+1}-${day.getDate()}`;
+            labels.push(key);
+            const list = data[key] || [];
+            values.push(list.reduce((a, b) => a + b, 0));
+        }
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: '每日喝水总量 (ml)',
+                    data: values,
+                    borderWidth: 2
+                }]
+            }
+        });
+    }
+
+    render();
+</script>
+
+</body>
+</html>
